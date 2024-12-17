@@ -1,9 +1,9 @@
 length: 20 
 stiffness: 1e6
 area: 0.8
-spring: 5e5
-damping: 500
-density: 50
+spring: 5e6
+damping: 2000
+density: 200
 numelem: 10
 numsteps: 1024 timestep: 0.0002688
 time: 0.000000 force: 0.0000
@@ -1030,3 +1030,6 @@ time: 0.274175 force: 0.0000
 time: 0.274443 force: 0.0000
 time: 0.274712 force: 0.0000
 time: 0.274981 force: 0.0000
+
+
+

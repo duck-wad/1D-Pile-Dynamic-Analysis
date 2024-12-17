@@ -2,6 +2,7 @@
 
 #include "Mesh.h"
 #include "Utils.h"
+#include "NewmarkBeta.h"
 
 /* ELEMENT METHODS */
 
@@ -28,7 +29,8 @@ Element::Element(double L, double E, double A, double k, double c, double rho) {
 
 }
 
-/* END OF ELEMENT METHOD */
+/* END OF ELEMENT METHODs */
+
 
 
 /* MESH METHODS */
@@ -37,6 +39,9 @@ Mesh::Mesh(std::string fileName) {
 	ReadFile(fileName);
 	Discretize();
 	Assemble();
+	ApplyBC();
+	Solve();
+	PrintResults();
 }
 
 void Mesh::ReadFile(std::string fileName) {
@@ -68,7 +73,7 @@ void Mesh::Discretize() {
 	globalStiffness.resize((numelem + 1), std::vector<double>(numelem + 1, 0.0));
 	globalMass.resize((numelem + 1), std::vector<double>(numelem + 1, 0.0));
 	globalDamping.resize((numelem + 1), std::vector<double>(numelem + 1, 0.0));
-	globalForce.resize(numsteps, std::vector<double>(numelem+1, 0.0));
+	globalForce.resize(numsteps, std::vector<double>(numelem + 1, 0.0));
 	//force is applied directly to the top node so apply directly to globalForce
 	for (size_t i = 0; i < static_cast<size_t>(numsteps); i++) {
 		globalForce[i][0] = forcedNode[i];
@@ -111,7 +116,70 @@ void Mesh::Assemble() {
 		globalDamping[node2][node1] += elements[i].getDamping(1, 0);
 		globalDamping[node2][node2] += elements[i].getDamping(1, 1);
 	}
+	writeMatrixToCSV(globalStiffness, "data\\STIFFNESS.csv");
+	writeMatrixToCSV(globalMass, "data\\MASS.csv");
+	writeMatrixToCSV(globalDamping, "data\\DAMPING.csv");
 }
 
+//BC is applied at the bottom node, no displacement, velocity, or acceleration
+//replace corresponding row AND column with zero in all matrices, and diagonal term with 1
+//replace force vector with 0 
+//in static problems, only the row is replaced with zero
+//in dynamic problem, both row and column replace with zero
+void Mesh::ApplyBC() {
+	//bottom node is restrained to have zero movement
+	size_t restrainedNode = static_cast<size_t>(numelem);
+	for (size_t i = 0; i < numelem + 1; i++) {
+		if (i == restrainedNode) {
+			globalStiffness[restrainedNode][i] = 1.0;
+			globalMass[restrainedNode][i] = 1.0;
+			globalDamping[restrainedNode][i] = 1.0;
+		}
+		else {
+			//zero out row
+			globalStiffness[restrainedNode][i] = 0.0;
+			globalMass[restrainedNode][i] = 0.0;
+			globalDamping[restrainedNode][i] = 0.0;
+			//zero out column
+			globalStiffness[i][restrainedNode] = 0.0;
+			globalMass[i][restrainedNode] = 0.0;
+			globalDamping[i][restrainedNode] = 0.0;
+		}
+	}
+	//replace force at node with 0
+	for (size_t i = 0; i < numsteps; i++) {
+		globalForce[i][restrainedNode] = 0.0;
+	}
+}
+
+void Mesh::Solve() {
+	displacement.resize(numsteps, std::vector<double>(numelem + 1, 0.0));
+	velocity.resize(numsteps, std::vector<double>(numelem + 1, 0.0));
+	acceleration.resize(numsteps, std::vector<double>(numelem + 1, 0.0));
+	//initial condition is no displacement or velocity in any nodes
+	std::vector<double> D_i(numelem + 1, 0.0);
+	std::vector<double> V_i(numelem + 1, 0.0);
+	int nodes = numelem + 1;
+	AverageAccelerationMethod(displacement, velocity, acceleration, globalForce, D_i, V_i, numsteps, delta_t, globalMass, globalDamping, globalStiffness, nodes);
+}
+
+void Mesh::PrintResults() {
+	//print displacement, velocity, and acceleration to separate CSV files
+	std::vector<std::vector<double>> displacementResults;
+	displacementResults.push_back(time);
+	std::vector<std::vector<double>> velocityResults;
+	velocityResults.push_back(time);
+	std::vector<std::vector<double>> accelerationResults;
+	accelerationResults.push_back(time);
+
+	for (size_t i = 0; i < numelem + 1; i++) {
+		displacementResults.push_back(transpose(displacement)[i]);
+		velocityResults.push_back(transpose(velocity)[i]);
+		accelerationResults.push_back(transpose(acceleration)[i]);
+	}
+	writeMatrixToCSV(transpose(displacementResults), "data\\OUTPUT_DISPLACEMENT.csv");
+	writeMatrixToCSV(transpose(velocityResults), "data\\OUTPUT_VELOCITY.csv");
+	writeMatrixToCSV(transpose(accelerationResults), "data\\OUTPUT_ACCELERATION.csv");
+}
 
 /* END OF MESH METHODS */

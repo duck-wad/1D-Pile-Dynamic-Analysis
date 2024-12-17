@@ -26,6 +26,7 @@ public:
 	void Assemble();
 	void ApplyBC();
 	void Solve();
+	void PrintResults();
 
 protected:
 	//connectivity matrix is 1:1 since 1D 
@@ -52,4 +53,8 @@ protected:
 	std::vector<std::vector<double>> globalDamping;
 	//global force vector is a vector of vectors, since force is time dependent
 	std::vector<std::vector<double>> globalForce;
+	//displacement, velocity, and acceleration will have same dimensions as globalForce
+	std::vector<std::vector<double>> displacement;
+	std::vector<std::vector<double>> velocity;
+	std::vector<std::vector<double>> acceleration;
 };
