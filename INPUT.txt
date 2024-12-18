@@ -4,7 +4,7 @@ area: 0.8
 spring: 1.2e9
 damping: 20000
 density: 2400
-numelem: 100
+numelem: 20
 numsteps: 1001 timestep: 0.01
 time: 0.00 force: 0.0000
 time: 0.01 force: 0.0126
