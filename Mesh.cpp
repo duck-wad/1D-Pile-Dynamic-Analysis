@@ -40,8 +40,6 @@ Mesh::Mesh(std::string fileName) {
 	Discretize();
 	Assemble();
 	ApplyBC();
-	Solve();
-	PrintResults();
 }
 
 void Mesh::ReadFile(std::string fileName) {
